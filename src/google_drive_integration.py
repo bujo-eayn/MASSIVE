@@ -1,18 +1,32 @@
-# google_drive_integration.py
-
-from google.oauth2 import service_account
-from googleapiclient.discovery import build
-from googleapiclient.http import MediaFileUpload
+from pydrive.auth import GoogleAuth
+from pydrive.drive import GoogleDrive
+import os
 
 class GoogleDriveUploader:
-    def __init__(self):
-        # Initialize Google Drive credentials and service
-        self.credentials = service_account.Credentials.from_service_account_file(
-            'your-credentials.json', scopes=['https://www.googleapis.com/auth/drive']
-        )
-        self.drive_service = build('drive', 'v3', credentials=self.credentials)
+    def __init__(self, output_folder):
+        self.output_folder = output_folder
 
-    def upload_file(self, local_file_path, drive_folder_id, drive_file_name):
-        # Check if the file already exists in Google Drive (prevent duplicate uploads)
-        # Implement file upload logic similar to what was provided earlier
-        pass
+    def authenticate_google_drive(self):
+        try:
+            gauth = GoogleAuth()
+            gauth.LocalWebserverAuth()
+            drive = GoogleDrive(gauth)
+            return drive
+        except Exception as e:
+            print(f"Authentication failed: {str(e)}")
+            return None
+
+    def upload_to_google_drive(self, file_paths):
+        try:
+            drive = self.authenticate_google_drive()
+            if drive is not None:
+                for file_path in file_paths:
+                    file = drive.CreateFile({'title': os.path.basename(file_path)})
+                    file.Upload()
+                print("Files uploaded to Google Drive successfully.")
+        except Exception as e:
+            print(f"An error occurred during file upload: {str(e)}")
+
+if __name__ == "__main__":
+    google_drive_uploader = GoogleDriveUploader("output")
+    google_drive_uploader.upload_to_google_drive(["output/en_to_all_translations.jsonl"])
