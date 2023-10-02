@@ -1,0 +1,65 @@
+import os
+import pandas as pd
+from openpyxl import load_workbook
+
+# Specify the directory containing your XLSX files
+xlsx_directory = r"C:\Users\m.odero\Documents\3.2\Computer graphics\data json"
+
+# Function to extract language code from filename
+def extract_language_code(filename):
+    parts = filename.split('-')
+    if len(parts) >= 2:
+        return parts[0]
+    else:
+        return None
+
+# Get a list of XLSX file names in the directory
+xlsx_files = [filename for filename in os.listdir(xlsx_directory) if filename.endswith(".xlsx")]
+
+# Process each XLSX file
+for xlsx_file in xlsx_files:
+    language_code = extract_language_code(xlsx_file)
+    if language_code:
+        # Load the XLSX file into a DataFrame
+        df = pd.read_excel(os.path.join(xlsx_directory, xlsx_file))
+        
+        # Group the DataFrame by language code
+        grouped = df.groupby(language_code)
+        
+        # Create separate XLSX files for each language
+        for language, group_df in grouped:
+            output_filename = os.path.join(xlsx_directory, f"{language}-{xlsx_file}")
+            
+            # Create a new Excel writer object
+            writer = pd.ExcelWriter(output_filename, engine='openpyxl')
+            
+            # Try to open an existing workbook
+            try:
+                writer.book = load_workbook(output_filename)
+                
+                # Copy the existing sheets
+                writer.sheets = {ws.title: ws for ws in writer.book.worksheets}
+                
+            except FileNotFoundError:
+                # Workbook does not exist, create a new one
+                pass
+            
+            # Write the DataFrame to the Excel sheet
+            group_df.to_excel(writer, index=False, sheet_name=language, startrow=1, header=False)
+            
+            # Access the XLSXWriter workbook and worksheet objects
+            workbook = writer.book
+            worksheet = writer.sheets[language]
+            
+            # Get the max row count in the existing sheets
+            max_row = len(worksheet['A']) + 1
+            
+            # Add a header and format the Excel sheet
+            for column, value in enumerate(group_df.columns, 1):
+                cell = worksheet.cell(row=max_row, column=column, value=value)
+                cell.font = cell.font.copy(bold=True)
+            
+            # Save the new XLSX file
+            writer.save()
+
+print("XLSX files separated and cleaned into individual language files.")
